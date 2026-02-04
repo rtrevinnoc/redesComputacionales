@@ -21,3 +21,5 @@ python make.py
 Despues ejecutar la verificación y la simulación del modulo que diseñamos, les presentará el siguiente archivo:
 
 ![Visualización](screenshot.png)
+
+Si lo prefieren, pueden hacer directamente la visualización de [waveform.vcd](waveform.vcd) en la página de [Surfer](https://surfer-project.org), sin necesidad de descargar el programa ya que nos proporcionan una versión en WebAssembly.
