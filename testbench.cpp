@@ -22,6 +22,7 @@ int main(int argc, char **argv, char **env) {
 
     int sim_time = 0;
     bool transmission_started = false;
+    int tx_count = 0;
 
     // Initial state
     dut->clk = 0;
@@ -29,25 +30,26 @@ int main(int argc, char **argv, char **env) {
     dut->send_btn = 0;
     dut->eval();
 
-    // Run simulation
-    // We run until we see the transmission finish (TX_EN goes low after being high)
-    while (!Verilated::gotFinish() && sim_time < 5000) {
+    std::cout << "Starting Ethernet MAC TX Simulation..." << std::endl;
+
+    while (!Verilated::gotFinish() && sim_time < 10000) {
         
-        // 1. Handle Reset
-        if (sim_time < 20) {
+        // 1. Handle Reset (Active High)
+        if (sim_time < 40) {
             dut->rst = 1;
         } else {
             dut->rst = 0;
         }
 
-        // 2. Trigger Send Button after reset
-        if (sim_time == 50) {
+        // 2. Trigger Send Button after reset is released
+        if (sim_time == 100) {
             dut->send_btn = 1;
-        } else if (sim_time == 100) {
+            std::cout << "[SIM] Pressing Send Button..." << std::endl;
+        } else if (sim_time == 200) {
             dut->send_btn = 0;
         }
 
-        // 3. Toggle Clock (simulate 25MHz ETH clock)
+        // 3. Toggle Clock (simulate 25MHz ETH clock period)
         if (sim_time % 5 == 0) {
             dut->clk ^= 1;
         }
@@ -55,16 +57,25 @@ int main(int argc, char **argv, char **env) {
         // 4. Evaluate the model
         dut->eval();
 
-        // 5. Monitor and Print Outputs
-        // Only print on rising edge to see stable data
-        if (sim_time % 10 == 0 && sim_time > 40) {
+        // 5. Monitor Outputs on the Rising Edge
+        if (sim_time % 10 == 0 && dut->clk == 1) {
             if (dut->eth_tx_en) {
                 transmission_started = true;
-                std::cout << "t=" << std::setw(4) << sim_time 
-                          << " [TXING] nibble=0x" << std::hex << (int)dut->eth_txd 
-                          << " en=" << (int)dut->eth_tx_en << std::dec << std::endl;
+                tx_count++;
+                
+                std::cout << "t=" << std::setw(5) << sim_time 
+                          << " [TX] nibble: 0x" << std::hex << (int)dut->eth_txd 
+                          << " | count: " << std::dec << tx_count;
+
+                // Annotate the output for students
+                if (tx_count <= 14) std::cout << " (Preamble)";
+                else if (tx_count <= 16) std::cout << " (SFD)";
+                else if (tx_count > 16 && tx_count <= 136) std::cout << " (Data)";
+                else std::cout << " (CRC/FCS)";
+
+                std::cout << std::endl;
             } else if (transmission_started) {
-                std::cout << "t=" << sim_time << " Transmission Complete." << std::endl;
+                std::cout << "[SIM] TX_EN dropped. Transmission Complete." << std::endl;
                 break; 
             }
         }

@@ -73,6 +73,7 @@ def sim(tool: str = "verilator"):
     project.add_fileset("rtl")
     # Set the appropriate design verification flow.
     project.set_flow(DVFlow(tool=tool))
+    # project.set('option', 'remote', True)
     project.set('tool', 'verilator', 'task', 'compile', 'var', 'trace', True)
     project.set('tool', 'verilator', 'task', 'compile', 'var', 'trace_type', 'vcd')
 
