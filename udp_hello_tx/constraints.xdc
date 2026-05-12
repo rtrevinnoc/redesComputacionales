@@ -1,0 +1,18 @@
+## Clock (100MHz System Clock)
+set_property -dict { PACKAGE_PIN E3    IOSTANDARD LVCMOS33 } [get_ports { clk_50mhz }];
+create_clock -add -name sys_clk_pin -period 10.00 -waveform {0 5} [get_ports { clk_50mhz }];
+
+## Ethernet Reference Clock (25 MHz from PHY)
+set_property -dict { PACKAGE_PIN G18   IOSTANDARD LVCMOS33 } [get_ports { eth_tx_clk }];
+create_clock -add -name eth_tx_clk -period 40.00 -waveform {0 20} [get_ports { eth_tx_clk }];
+
+## Ethernet TX Interface
+set_property -dict { PACKAGE_PIN H16   IOSTANDARD LVCMOS33 } [get_ports { eth_tx_en }];
+set_property -dict { PACKAGE_PIN H14   IOSTANDARD LVCMOS33 } [get_ports { eth_txd[0] }];
+set_property -dict { PACKAGE_PIN J14   IOSTANDARD LVCMOS33 } [get_ports { eth_txd[1] }];
+set_property -dict { PACKAGE_PIN J13   IOSTANDARD LVCMOS33 } [get_ports { eth_txd[2] }];
+set_property -dict { PACKAGE_PIN H17   IOSTANDARD LVCMOS33 } [get_ports { eth_txd[3] }];
+
+## Reset and Buttons
+set_property -dict { PACKAGE_PIN C2    IOSTANDARD LVCMOS33 } [get_ports { rst_n }]; # Reset Button (Active Low)
+set_property -dict { PACKAGE_PIN D9    IOSTANDARD LVCMOS33 } [get_ports { btn_send }]; # BTN0
