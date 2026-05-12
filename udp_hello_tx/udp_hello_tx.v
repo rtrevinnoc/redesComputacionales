@@ -9,7 +9,8 @@ module udp_hello_tx (
     output wire [3:0] eth_txd,
     input  wire eth_tx_clk,
     output wire eth_ref_clk,
-    output wire eth_rstn
+    output wire eth_rstn,
+    output wire [3:0] led
 );
 
     // --- ETHERNET PHY CONTROL ---
@@ -22,6 +23,9 @@ module udp_hello_tx (
     always @(posedge clk_100mhz) begin
         if (phy_rst_cnt < 20'hFFFFF) phy_rst_cnt <= phy_rst_cnt + 1;
     end
+
+    // Debug LEDs: {TX_EN, State[2:0]}
+    assign led = {tx_en_reg, state[2:0]};
 
     // --- NETWORK PARAMETERS ---
     localparam [47:0] MAC_DEST = 48'hFF_FF_FF_FF_FF_FF;
@@ -65,7 +69,7 @@ module udp_hello_tx (
         end
     end
 
-    // --- EDGE DETECTOR ---
+    // --- EDGE DETECTOR (SYNC TO eth_tx_clk) ---
     reg btn_sync_1, btn_sync_2;
     wire btn_send_pulse;
     always @(posedge eth_tx_clk or negedge rst_n) begin
@@ -74,7 +78,7 @@ module udp_hello_tx (
     end
     assign btn_send_pulse = (btn_sync_1 && !btn_sync_2);
 
-    // --- MII ADAPTATION ---
+    // --- MII ADAPTATION (BYTES TO NIBBLES) ---
     reg [2:0]  state = 0;
     reg [10:0] byte_counter = 0;
     reg [7:0]  current_byte = 0;
@@ -163,12 +167,12 @@ module udp_hello_tx (
                     end
                 end
                 TX_FCS: begin
-                    // Sending CRC bytes in little-endian order (Standard Ethernet)
+                    // Bit-reversal and byte-swapping for Ethernet CRC
                     case (byte_counter)
-                        0: current_byte <= crc_out[7:0];
-                        1: current_byte <= crc_out[15:8];
-                        2: current_byte <= crc_out[23:16];
-                        3: current_byte <= crc_out[31:24];
+                        0: current_byte <= {crc_out[24], crc_out[25], crc_out[26], crc_out[27], crc_out[28], crc_out[29], crc_out[30], crc_out[31]};
+                        1: current_byte <= {crc_out[16], crc_out[17], crc_out[18], crc_out[19], crc_out[20], crc_out[21], crc_out[22], crc_out[23]};
+                        2: current_byte <= {crc_out[8],  crc_out[9],  crc_out[10], crc_out[11], crc_out[12], crc_out[13], crc_out[14], crc_out[15]};
+                        3: current_byte <= {crc_out[0],  crc_out[1],  crc_out[2],  crc_out[3],  crc_out[4],  crc_out[5],  crc_out[6],  crc_out[7]};
                     endcase
                     if (nibble_tick) begin
                         if (byte_counter == 3) begin state <= IDLE; tx_en_reg <= 0; end

@@ -50,6 +50,6 @@ module crc32_nibble (
         end
     end
 
-    // Direct remainder inversion (Standard)
-    assign crc_out = ~c;
+    // Raw remainder (Inversion happens at the top level mapping)
+    assign crc_out = c;
 endmodule
