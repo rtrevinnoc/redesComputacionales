@@ -96,7 +96,7 @@ module udp_hello_tx (
                 PREAMBLE: begin
                     current_byte <= 8'h55;
                     if (nibble_sel) begin
-                        if (byte_counter == 6) begin state <= SFD; byte_counter <= 0; end
+                        if (byte_counter == 31) begin state <= SFD; byte_counter <= 0; end
                         else byte_counter <= byte_counter + 1;
                     end
                     nibble_sel <= ~nibble_sel;
