@@ -7,8 +7,16 @@ module udp_hello_tx (
 
     output wire eth_tx_en,
     output wire [3:0] eth_txd,
-    input  wire eth_tx_clk
+    input  wire eth_tx_clk,
+    output wire eth_ref_clk,
+    output wire eth_rstn
 );
+
+    // --- ETHERNET PHY CONTROL ---
+    assign eth_rstn = 1'b1; // Take PHY out of reset
+    reg [1:0] ref_clk_cnt = 0;
+    always @(posedge clk_50mhz) ref_clk_cnt <= ref_clk_cnt + 1;
+    assign eth_ref_clk = ref_clk_cnt[1]; // 100MHz / 4 = 25MHz
 
     // --- PARAMETROS DE RED ---
     localparam [47:0] MAC_DEST = 48'h36_B9_CE_F1_10_80;
