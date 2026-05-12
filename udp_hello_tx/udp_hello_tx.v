@@ -78,7 +78,7 @@ module udp_hello_tx (
     wire [31:0] crc_out;
     crc32_nibble crc_inst (.clk(eth_tx_clk), .rst_n(rst_n & ~crc_rst), .en(crc_en), .d(eth_txd), .crc_out(crc_out));
 
-    assign eth_txd = (nibble_sel == 0) ? current_byte[3:0] : current_byte[7:4];
+    assign eth_txd = (nibble_sel == 1) ? current_byte[3:0] : current_byte[7:4];
     assign eth_tx_en = tx_en_reg;
 
     always @(negedge eth_tx_clk or negedge rst_n) begin
@@ -104,11 +104,12 @@ module udp_hello_tx (
 
                 SFD: begin
                     current_byte <= 8'hD5;
-                    if (nibble_sel) begin state <= DATA; byte_counter <= 0; crc_rst <= 0; crc_en <= 1; end
+                    if (nibble_sel) begin state <= DATA; byte_counter <= 0; crc_rst <= 0; end
                     nibble_sel <= ~nibble_sel;
                 end
 
                 DATA: begin
+                    if (!crc_en) crc_en <= 1;
                     // MAC_DEST(6) + MAC_SRC(6) + TYPE(2) + PAYLOAD(33) + PADDING(13) = 60 bytes
                     if (byte_counter < 6)  current_byte <= MAC_DEST[ (5-byte_counter)*8 +: 8 ];
                     else if (byte_counter < 12) current_byte <= MAC_SRC[ (11-byte_counter)*8 +: 8 ];
@@ -125,10 +126,10 @@ module udp_hello_tx (
 
                 FCS: begin
                     case (byte_counter)
-                        0: current_byte <= {crc_out[24], crc_out[25], crc_out[26], crc_out[27], crc_out[28], crc_out[29], crc_out[30], crc_out[31]};
-                        1: current_byte <= {crc_out[16], crc_out[17], crc_out[18], crc_out[19], crc_out[20], crc_out[21], crc_out[22], crc_out[23]};
-                        2: current_byte <= {crc_out[8],  crc_out[9],  crc_out[10], crc_out[11], crc_out[12], crc_out[13], crc_out[14], crc_out[15]};
-                        3: current_byte <= {crc_out[0],  crc_out[1],  crc_out[2],  crc_out[3],  crc_out[4],  crc_out[5],  crc_out[6],  crc_out[7]};
+                        0: current_byte <= crc_out[7:0];
+                        1: current_byte <= crc_out[15:8];
+                        2: current_byte <= crc_out[23:16];
+                        3: current_byte <= crc_out[31:24];
                     endcase
                     if (nibble_sel) begin
                         if (byte_counter == 3) begin state <= IDLE; tx_en_reg <= 0; end
