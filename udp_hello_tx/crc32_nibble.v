@@ -50,6 +50,6 @@ module crc32_nibble (
         end
     end
 
-    // Raw remainder (Inversion happens at the top level mapping)
-    assign crc_out = c;
+    // Remainder inverted for standard Ethernet
+    assign crc_out = ~c;
 endmodule
