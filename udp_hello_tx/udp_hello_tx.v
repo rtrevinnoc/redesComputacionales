@@ -118,13 +118,14 @@ module udp_hello_tx (
                     else current_byte <= 8'h00; // Padding
 
                     if (nibble_sel) begin
-                        if (byte_counter == 59) begin state <= FCS; byte_counter <= 0; crc_en <= 0; end
+                        if (byte_counter == 59) begin state <= FCS; byte_counter <= 0; end
                         else byte_counter <= byte_counter + 1;
                     end
                     nibble_sel <= ~nibble_sel;
                 end
 
                 FCS: begin
+                    if (crc_en) crc_en <= 0;
                     case (byte_counter)
                         0: current_byte <= crc_out[7:0];
                         1: current_byte <= crc_out[15:8];
