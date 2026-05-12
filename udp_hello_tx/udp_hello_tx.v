@@ -65,7 +65,7 @@ module udp_hello_tx (
         end
     end
 
-    // --- EDGE DETECTOR (SYNC TO eth_tx_clk) ---
+    // --- EDGE DETECTOR ---
     reg btn_sync_1, btn_sync_2;
     wire btn_send_pulse;
     always @(posedge eth_tx_clk or negedge rst_n) begin
@@ -74,7 +74,7 @@ module udp_hello_tx (
     end
     assign btn_send_pulse = (btn_sync_1 && !btn_sync_2);
 
-    // --- MII ADAPTATION (BYTES TO NIBBLES) ---
+    // --- MII ADAPTATION ---
     reg [2:0]  state = 0;
     reg [10:0] byte_counter = 0;
     reg [7:0]  current_byte = 0;
@@ -86,7 +86,6 @@ module udp_hello_tx (
     assign eth_txd = tx_data_nibble;
     assign eth_tx_en = tx_en_reg;
 
-    // Use falling edge for outputs to provide stable setup time for the PHY
     always @(negedge eth_tx_clk or negedge rst_n) begin
         if (!rst_n) begin
             nibble_sel <= 0; tx_data_nibble <= 0; nibble_tick <= 0;
@@ -106,13 +105,11 @@ module udp_hello_tx (
     // --- DYNAMIC CRC ---
     reg crc_en, crc_rst;
     wire [31:0] crc_out;
-    // CRC samples on positive edge (stable data from falling edge)
     crc32_nibble crc_inst (.clk(eth_tx_clk), .rst_n(rst_n & ~crc_rst), .en(crc_en), .d(eth_txd), .crc_out(crc_out));
 
     // --- MAIN FSM ---
     localparam [2:0] IDLE=0, TX_PREAMBLE=1, TX_SFD=2, TX_MAC=3, TX_IP_UDP_DATA=4, TX_PADDING=5, TX_FCS=6;
 
-    // FSM also runs on falling edge for timing margin
     always @(negedge eth_tx_clk or negedge rst_n) begin
         if (!rst_n) begin
             state <= IDLE; byte_counter <= 0; tx_en_reg <= 0; crc_en <= 0; crc_rst <= 1;
@@ -161,14 +158,17 @@ module udp_hello_tx (
                 TX_PADDING: begin
                     current_byte <= 8'h00;
                     if (nibble_tick) begin
-                        if (byte_counter == 12) begin state <= TX_FCS; byte_counter <= 0; crc_en <= 0; end
+                        if (byte_counter == 20) begin state <= TX_FCS; byte_counter <= 0; crc_en <= 0; end
                         else byte_counter <= byte_counter + 1;
                     end
                 end
                 TX_FCS: begin
+                    // Sending CRC bytes in little-endian order (Standard Ethernet)
                     case (byte_counter)
-                        0: current_byte <= crc_out[7:0];   1: current_byte <= crc_out[15:8];
-                        2: current_byte <= crc_out[23:16]; 3: current_byte <= crc_out[31:24];
+                        0: current_byte <= crc_out[7:0];
+                        1: current_byte <= crc_out[15:8];
+                        2: current_byte <= crc_out[23:16];
+                        3: current_byte <= crc_out[31:24];
                     endcase
                     if (nibble_tick) begin
                         if (byte_counter == 3) begin state <= IDLE; tx_en_reg <= 0; end

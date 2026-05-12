@@ -8,6 +8,7 @@ module crc32_nibble (
     reg [31:0] c;
     wire [31:0] n;
     
+    // Standard Ethernet CRC-32 polynomial logic for 4-bit nibbles
     assign n[0] = c[28] ^ d[0];
     assign n[1] = c[28] ^ c[29] ^ d[0] ^ d[1];
     assign n[2] = c[28] ^ c[29] ^ c[30] ^ d[0] ^ d[1] ^ d[2];
@@ -49,11 +50,6 @@ module crc32_nibble (
         end
     end
 
-    // The output FCS needs bit reversal per byte and inversion
-    assign crc_out = ~{
-        c[24], c[25], c[26], c[27], c[28], c[29], c[30], c[31],
-        c[16], c[17], c[18], c[19], c[20], c[21], c[22], c[23],
-        c[8], c[9], c[10], c[11], c[12], c[13], c[14], c[15],
-        c[0], c[1], c[2], c[3], c[4], c[5], c[6], c[7]
-    };
+    // Direct remainder inversion (Standard)
+    assign crc_out = ~c;
 endmodule
