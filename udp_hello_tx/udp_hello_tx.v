@@ -239,10 +239,10 @@ module udp_hello_tx (
 
                 TX_FCS: begin
                     case (byte_counter)
-                        0: current_byte <= crc_out[31:24];
-                        1: current_byte <= crc_out[23:16];
-                        2: current_byte <= crc_out[15:8];
-                        3: current_byte <= crc_out[7:0];
+                        0: current_byte <= crc_out[7:0];
+                        1: current_byte <= crc_out[15:8];
+                        2: current_byte <= crc_out[23:16];
+                        3: current_byte <= crc_out[31:24];
                         default: current_byte <= 8'h00;
                     endcase
 
