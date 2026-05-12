@@ -1,7 +1,7 @@
 `timescale 1ns / 1ps
 
 module udp_hello_tx (
-    input  wire clk_100mhz, // Pin E3
+    input  wire clk_100mhz,
     input  wire rst_n,
     input  wire btn_send,
 
@@ -13,10 +13,9 @@ module udp_hello_tx (
 );
 
     // --- ETHERNET PHY CONTROL ---
-    // The Arty A7 PHY needs a 25MHz reference clock and a reset pulse.
     reg [1:0] ref_clk_cnt = 0;
     always @(posedge clk_100mhz) ref_clk_cnt <= ref_clk_cnt + 1;
-    assign eth_ref_clk = ref_clk_cnt[1]; // 100MHz / 4 = 25MHz
+    assign eth_ref_clk = ref_clk_cnt[1];
 
     reg [19:0] phy_rst_cnt = 0;
     assign eth_rstn = (phy_rst_cnt > 20'h80000); 
@@ -25,7 +24,7 @@ module udp_hello_tx (
     end
 
     // --- NETWORK PARAMETERS ---
-    localparam [47:0] MAC_DEST = 48'hFF_FF_FF_FF_FF_FF; // Broadcast
+    localparam [47:0] MAC_DEST = 48'hFF_FF_FF_FF_FF_FF;
     localparam [47:0] MAC_SRC  = 48'h00_18_3E_02_11_22;
     localparam [15:0] ETHER_TYPE = 16'h0800;
 
@@ -34,7 +33,7 @@ module udp_hello_tx (
 
     wire [159:0] IP_HEADER = {
         8'h45, 8'h00, 16'h0021, 16'h0000, 16'h0000,
-        8'h40, 8'h11, 16'hF64F, IP_SRC, IP_DEST // Fixed Checksum F64F
+        8'h40, 8'h11, 16'hF64F, IP_SRC, IP_DEST
     };
 
     localparam [15:0] UDP_SRC_PORT = 16'd1234;
@@ -45,7 +44,7 @@ module udp_hello_tx (
         UDP_SRC_PORT, UDP_DST_PORT, UDP_LENGTH, 16'h0000
     };
 
-    wire [39:0] PAYLOAD_DATA = {8'h48, 8'h45, 8'h4C, 8'h4C, 8'h4F}; // "HELLO"
+    wire [39:0] PAYLOAD_DATA = {8'h48, 8'h45, 8'h4C, 8'h4C, 8'h4F};
     wire [263:0] FULL_PAYLOAD = {IP_HEADER, UDP_HEADER, PAYLOAD_DATA};
 
     // --- BUTTON DEBOUNCE ---
@@ -87,15 +86,16 @@ module udp_hello_tx (
     assign eth_txd = tx_data_nibble;
     assign eth_tx_en = tx_en_reg;
 
-    always @(posedge eth_tx_clk or negedge rst_n) begin
+    // Use falling edge for outputs to provide stable setup time for the PHY
+    always @(negedge eth_tx_clk or negedge rst_n) begin
         if (!rst_n) begin
             nibble_sel <= 0; tx_data_nibble <= 0; nibble_tick <= 0;
         end else if (tx_en_reg) begin
             if (nibble_sel == 0) begin
-                tx_data_nibble <= current_byte[3:0]; // LSB nibble first
+                tx_data_nibble <= current_byte[3:0];
                 nibble_sel <= 1; nibble_tick <= 0;
             end else begin
-                tx_data_nibble <= current_byte[7:4]; // MSB nibble
+                tx_data_nibble <= current_byte[7:4];
                 nibble_sel <= 0; nibble_tick <= 1;
             end
         end else begin
@@ -106,12 +106,14 @@ module udp_hello_tx (
     // --- DYNAMIC CRC ---
     reg crc_en, crc_rst;
     wire [31:0] crc_out;
+    // CRC samples on positive edge (stable data from falling edge)
     crc32_nibble crc_inst (.clk(eth_tx_clk), .rst_n(rst_n & ~crc_rst), .en(crc_en), .d(eth_txd), .crc_out(crc_out));
 
     // --- MAIN FSM ---
     localparam [2:0] IDLE=0, TX_PREAMBLE=1, TX_SFD=2, TX_MAC=3, TX_IP_UDP_DATA=4, TX_PADDING=5, TX_FCS=6;
 
-    always @(posedge eth_tx_clk or negedge rst_n) begin
+    // FSM also runs on falling edge for timing margin
+    always @(negedge eth_tx_clk or negedge rst_n) begin
         if (!rst_n) begin
             state <= IDLE; byte_counter <= 0; tx_en_reg <= 0; crc_en <= 0; crc_rst <= 1;
         end else begin
