@@ -19,7 +19,7 @@ module udp_hello_tx (
     assign eth_ref_clk = ref_clk_cnt[1]; // 100MHz / 4 = 25MHz
 
     // --- PARAMETROS DE RED ---
-    localparam [47:0] MAC_DEST = 48'h36_B9_CE_F1_10_80;
+    localparam [47:0] MAC_DEST = 48'hFF_FF_FF_FF_FF_FF;
     localparam [47:0] MAC_SRC  = 48'h00_18_3E_02_11_22;
     localparam [15:0] ETHER_TYPE = 16'h0800;
 
@@ -28,7 +28,7 @@ module udp_hello_tx (
 
     wire [159:0] IP_HEADER = {
         8'h45, 8'h00, 16'h0021, 16'h0000, 16'h0000,
-        8'h40, 8'h11, 16'hA4B8, IP_SRC, IP_DEST
+        8'h40, 8'h11, 16'hF64F, IP_SRC, IP_DEST
     };
 
     localparam [15:0] UDP_SRC_PORT = 16'd1234;
